@@ -1,0 +1,6 @@
+[theme]
+primaryColor = "#0056b3"        # 포인트 컬러 (신뢰감 있는 블루)
+backgroundColor = "#f8f9fa"     # 전체 배경색 (깔끔한 연회색)
+secondaryBackgroundColor = "#ffffff" # 사이드바 배경색 (흰색)
+textColor = "#212529"           # 글자색
+font = "sans serif"
