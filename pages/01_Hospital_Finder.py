@@ -5,10 +5,17 @@ import time
 import json
 import os
 import sys
-    
-# 💡 [핵심] 상위 폴더에 있는 ui_components에서 디자인과 지도 함수를 가져옵니다!
+from google import genai # 💡 구글 최신 공식 라이브러리 사용
+
+# 💡 상위 폴더에 있는 ui_components에서 디자인과 지도 함수를 가져옵니다
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from map_components import get_hospital_finder_css, get_kakao_map_html
+
+# ==========================================
+# 🔒 보안 및 배포 설정 (API 키 숨기기)
+# ==========================================
+# 💡 하드코딩된 키를 지우고, 배포 플랫폼의 환경변수(Secrets)에서 안전하게 불러옵니다.
+client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 # ==========================================
 # 0. 페이지 설정
@@ -18,7 +25,7 @@ page_icon_data = logo_path if os.path.exists(logo_path) else "⚕️"
 
 st.set_page_config(page_title="사조참치 | 원주 스마트 병원 찾기", page_icon=page_icon_data, layout="wide", initial_sidebar_state="expanded")
 
-# 💡 창고에서 가져온 CSS 씌우기
+# CSS 씌우기
 st.markdown(get_hospital_finder_css(), unsafe_allow_html=True)
 
 # ==========================================
@@ -42,7 +49,6 @@ if 'selected_hospital' not in st.session_state:
 # ==========================================
 with st.sidebar:
     st.subheader("🤖 AI 증상 분석기")
-    # 👇 여러 줄 입력창(text_area)으로 변경하고 높이를 130으로 설정했습니다!
     user_symptom = st.text_area("증상을 자세히 적어주세요", placeholder="예: 배가 아프고 열이 나요", height=130)
     analyze_btn = st.button("분석 및 매칭 시작", use_container_width=True, type="primary")
 
@@ -57,17 +63,38 @@ with st.sidebar:
     if analyze_btn or 'dept' in st.session_state:
         if analyze_btn:
             combined_symptom = user_symptom
-            with st.sidebar.status("AI가 증상을 분석 중입니다...", expanded=True):
-                time.sleep(1.0) 
-                if any(w in combined_symptom for w in ["기침", "콧물", "가래", "감기", "열", "목", "부었"]): pred, dept = "호흡기 질환", "내과"
-                elif any(w in combined_symptom for w in ["배", "설사", "소화", "위", "체", "토"]): pred, dept = "소화기 질환", "내과"
-                elif any(w in combined_symptom for w in ["뼈", "관절", "발목", "삠", "골절", "허리", "무릎"]): pred, dept = "근골격계 질환", "정형외과"
-                elif any(w in combined_symptom for w in ["눈", "건조", "뻑뻑", "시력", "충혈"]): pred, dept = "안구 질환", "안과"
-                elif any(w in combined_symptom for w in ["피부", "여드름", "발진", "가려움"]): pred, dept = "피부 질환", "피부과"
-                elif any(w in combined_symptom for w in ["이", "치아", "잇몸", "충치", "시림"]): pred, dept = "치주 질환", "치과"
-                else: pred, dept = "맞춤형 병원 추천", "전체"
-                
-                st.session_state['pred'], st.session_state['dept'], st.session_state['selected_hospital'] = pred, dept, "🗺️ 전체 보기"
+            with st.sidebar.status("Gemini AI가 증상을 분석 중입니다...", expanded=True):
+                try:
+                    prompt = f"""
+                    환자의 증상: "{combined_symptom}"
+                    이 증상을 분석해서 1. 의심되는 질환 분류(예: 소화기 질환, 호흡기 질환, 근골격계 질환, 안구 질환, 피부 질환 등)와 2. 가장 적합한 진료과(예: 내과, 정형외과, 피부과, 안과, 이비인후과, 치과, 신경외과 중 택 1)를 도출해.
+                    반드시 '질환, 진료과' 형식으로 쉼표로 구분해서 출력하고 다른 설명은 절대 쓰지마.
+                    예시: 소화기 질환, 내과
+                    """
+                    
+                    # 최신 라이브러리 규격에 맞는 'gemini-2.5-flash' 모델명 적용
+                    response = client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=prompt
+                    )
+                    
+                    result_text = response.text.strip()
+                    
+                    # AI 응답 파싱
+                    if "," in result_text:
+                        pred = result_text.split(",")[0].strip()
+                        dept = result_text.split(",")[1].strip()
+                    else:
+                        pred, dept = "맞춤형 증상", result_text.replace("과", "") + "과"
+                        
+                    st.session_state['pred'], st.session_state['dept'] = pred, dept
+                    st.session_state['selected_hospital'] = "🗺️ 전체 보기"
+                    time.sleep(0.5) 
+                    
+                except Exception as e:
+                    # 에러 발생 시 Fallback (방어 로직)
+                    st.error(f"AI 연동 중 문제가 발생했습니다: {e}")
+                    st.session_state['pred'], st.session_state['dept'], st.session_state['selected_hospital'] = "시스템 지연", "전체", "🗺️ 전체 보기"
         
         current_dept = st.session_state.get('dept', '전체')
         if current_dept != "전체":
@@ -88,7 +115,7 @@ with list_col:
     st.markdown(f"<h3 style='margin-bottom:0px; color:#333;'>검색결과 (<span style='color:#E53935;'>{len(filtered_df)}</span>건)</h3>", unsafe_allow_html=True)
     st.markdown("<p style='font-size:13px; color:#888; margin-bottom: 15px;'>※ 조건에 맞는 추천 병원 목록입니다.</p>", unsafe_allow_html=True)
 
-    # 👇 [신규 추가] AI 분석 결과 매칭 안내 박스 👇
+    # 👇 AI 분석 결과 매칭 안내 박스 👇
     if 'pred' in st.session_state and 'dept' in st.session_state and st.session_state['dept'] != "전체":
         st.markdown(f"""
         <div style="background-color: #e8f0fe; border-left: 4px solid #3162C7; padding: 12px 15px; border-radius: 6px; margin-bottom: 15px;">
@@ -99,7 +126,6 @@ with list_col:
             </p>
         </div>
         """, unsafe_allow_html=True)
-    # 👆 여기까지 👆
 
     # 기존 주의사항 UI
     st.markdown("""
@@ -128,6 +154,5 @@ with list_col:
 with map_col:
     hospitals_json = json.dumps(filtered_df[['병원명', '소재지', '종별', '평가등급', 'lat', 'lon']].to_dict(orient='records'), ensure_ascii=False)
     
-    # 💡 [핵심] 창고에서 만들어둔 지도 HTML 덩어리를 불러와서 뿌려주기만 하면 끝!
     html_code = get_kakao_map_html(hospitals_json, st.session_state['selected_hospital'])
     components.html(html_code, height=850)
