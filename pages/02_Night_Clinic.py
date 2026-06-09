@@ -18,7 +18,8 @@ from map_components import get_hospital_finder_css, get_kakao_map_html
 logo_path = "image/sajo_logo.png"
 page_icon_data = logo_path if os.path.exists(logo_path) else "🌙"
 
-st.set_page_config(page_title="사조참치 | 야간 진료 안내", page_icon=page_icon_data, layout="wide", initial_sidebar_state="collapsed")
+# 💡 수정 완료: 왼쪽 파란색 사이드바(메인 페이지 이동 메뉴)가 항상 보이도록 expanded로 변경했습니다.
+st.set_page_config(page_title="사조참치 | 야간 진료 안내", page_icon=page_icon_data, layout="wide", initial_sidebar_state="expanded")
 st.markdown(get_hospital_finder_css(), unsafe_allow_html=True)
 
 # 페이지 전용 추가 CSS (카드 디자인)
@@ -75,7 +76,6 @@ def fetch_real_time_data(api_key):
                 "병원명": name, "종별": "병원", "소재지": addr, "시간": time_str, "전화": tel, "lat": lat, "lon": lon, "평가등급": "야간 진료기관"
             })
             
-        # 💡 [핵심] 약국 API를 별도로 뚫지 않아도 되도록, 실시간 병원 데이터 밑에 약국 샘플을 자연스럽게 이어 붙입니다!
         dummy_pharmacies = [
             {"병원명": "365 열린약국 (단계동)", "종별": "약국", "소재지": "강원특별자치도 원주시 원문로 456", "시간": f"오늘({today_str}) 09:00 ~ 24:00", "전화": "033-742-0000", "lat": 37.3499, "lon": 127.9255, "평가등급": "심야 약국"},
             {"병원명": "단구 심야안심약국", "종별": "약국", "소재지": "강원특별자치도 원주시 단구로 123", "시간": f"오늘({today_str}) 22:00 ~ 익일 01:00", "전화": "033-731-0000", "lat": 37.3155, "lon": 127.9532, "평가등급": "심야 약국"},
@@ -83,7 +83,7 @@ def fetch_real_time_data(api_key):
         ]
         
         if real_data: 
-            real_data.extend(dummy_pharmacies) # 합치기
+            real_data.extend(dummy_pharmacies)
             return pd.DataFrame(real_data), True
         else: 
             return pd.DataFrame(mock_data), False
@@ -112,7 +112,6 @@ with list_col:
     st.markdown("<h3 style='margin-bottom:0px; color:#1a2a40; font-weight:900;'>🌙야간·휴일 진료 안내</h2>", unsafe_allow_html=True)
     st.markdown("<p style='font-size:13px; color:#888; margin-bottom: 15px;'>※ 현재 문을 연 원주 관내 병원과 약국입니다.</p>", unsafe_allow_html=True)
 
-    # 💡 빠졌던 주의사항 문구 완벽 복구!
     st.markdown("""
     <div style="background-color: #FFFDF5; border: 1px solid #FFE082; padding: 10px 12px; border-radius: 6px; margin-bottom: 15px; text-align: left;">
         <p style="margin: 0; font-size: 12px; color: #555; line-height: 1.5; word-break: keep-all;">
@@ -121,12 +120,9 @@ with list_col:
     </div>
     """, unsafe_allow_html=True)
 
-    if is_real:
-        st.success("🟢 **API 연동 중** (실시간 데이터)")
-    else:
-        st.warning("🟠 **예비 데이터** (서버 지연)")
+    # 💡 수정 완료: 요청하신 실시간 연동/예비 데이터 알림 문구 블록을 완전히 삭제했습니다.
 
-    # 필터 버튼 로직 (세션 상태를 활용해 버튼 클릭이 유지되게 함)
+    # 필터 버튼 로직
     f_col1, f_col2, f_col3 = st.columns(3)
     if f_col1.button("전체 보기", use_container_width=True): st.session_state['night_filter'] = "전체"
     if f_col2.button("🏥 병원/응급실", use_container_width=True): st.session_state['night_filter'] = "병원"
