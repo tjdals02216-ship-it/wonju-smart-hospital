@@ -14,7 +14,6 @@ from map_components import get_hospital_finder_css, get_kakao_map_html
 # ==========================================
 # 🔒 보안 및 배포 설정 (API 키 숨기기)
 # ==========================================
-# 💡 하드코딩된 키를 지우고, 배포 플랫폼의 환경변수(Secrets)에서 안전하게 불러옵니다.
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 # ==========================================
@@ -72,7 +71,6 @@ with st.sidebar:
                     예시: 소화기 질환, 내과
                     """
                     
-                    # 최신 라이브러리 규격에 맞는 'gemini-2.5-flash' 모델명 적용
                     response = client.models.generate_content(
                         model='gemini-2.5-flash',
                         contents=prompt
@@ -80,7 +78,6 @@ with st.sidebar:
                     
                     result_text = response.text.strip()
                     
-                    # AI 응답 파싱
                     if "," in result_text:
                         pred = result_text.split(",")[0].strip()
                         dept = result_text.split(",")[1].strip()
@@ -92,9 +89,33 @@ with st.sidebar:
                     time.sleep(0.5) 
                     
                 except Exception as e:
-                    # 에러 발생 시 Fallback (방어 로직)
-                    st.error(f"AI 연동 중 문제가 발생했습니다: {e}")
-                    st.session_state['pred'], st.session_state['dept'], st.session_state['selected_hospital'] = "시스템 지연", "전체", "🗺️ 전체 보기"
+                    # 💡 [핵심 업데이트] AI 에러 발생 시 실시간 키워드 라우팅 백업 엔진 가동!
+                    symptom_txt = combined_symptom.lower()
+                    
+                    # 기본 디폴트값 세팅
+                    pred = "일반/내과 질환"
+                    dept = "내과"
+                    
+                    # 사용자 입력 문장 속 키워드 검사 및 진료과 자동 매칭 규칙
+                    if any(w in symptom_txt for w in ["이", "치아", "잇몸", "이빨", "치통", "스케일링"]):
+                        pred, dept = "구강/치과 질환", "치과"
+                    elif any(w in symptom_txt for w in ["눈", "시력", "충혈", "안구", "시야", "결막"]):
+                        pred, dept = "안구 질환", "안과"
+                    elif any(w in symptom_txt for w in ["목", "코", "귀", "기침", "가래", "인후염", "비염", "감기", "침"]):
+                        pred, dept = "이비인후 질환", "이비인후과"
+                    elif any(w in symptom_txt for w in ["뼈", "허리", "어깨", "관절", "무릎", "다리", "발목", "손목", "통증", "근육", "인대"]):
+                        pred, dept = "근골격계 질환", "정형외과"
+                    elif any(w in symptom_txt for w in ["피부", "가려움", "두드러기", "여드름", "발진", "아토피"]):
+                        pred, dept = "피부 질환", "피부과"
+                    elif any(w in symptom_txt for w in ["머리", "두통", "뇌", "마비", "신경"]):
+                        pred, dept = "신경계 질환", "신경외과"
+                    elif any(w in symptom_txt for w in ["배", "속", "소화", "위", "토", "설사", "복통", "장염"]):
+                        pred, dept = "소화기 질환", "내과"
+                        
+                    # 비상 모드임을 알리되 사용자 경험을 위해 매칭값 주입
+                    st.session_state['pred'] = f"{pred} (비상 백업 매칭)"
+                    st.session_state['dept'] = dept
+                    st.session_state['selected_hospital'] = "🗺️ 전체 보기"
         
         current_dept = st.session_state.get('dept', '전체')
         if current_dept != "전체":
@@ -115,7 +136,7 @@ with list_col:
     st.markdown(f"<h3 style='margin-bottom:0px; color:#333;'>검색결과 (<span style='color:#E53935;'>{len(filtered_df)}</span>건)</h3>", unsafe_allow_html=True)
     st.markdown("<p style='font-size:13px; color:#888; margin-bottom: 15px;'>※ 조건에 맞는 추천 병원 목록입니다.</p>", unsafe_allow_html=True)
 
-    # 👇 AI 분석 결과 매칭 안내 박스 👇
+    # AI 분석 결과 매칭 안내 박스
     if 'pred' in st.session_state and 'dept' in st.session_state and st.session_state['dept'] != "전체":
         st.markdown(f"""
         <div style="background-color: #e8f0fe; border-left: 4px solid #3162C7; padding: 12px 15px; border-radius: 6px; margin-bottom: 15px;">
