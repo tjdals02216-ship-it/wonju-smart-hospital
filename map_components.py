@@ -54,7 +54,7 @@ def get_kakao_map_html(hospitals_json, selected_hospital):
     <body style="margin: 0; padding: 0;">
     <div id="map" style="width:100%; height:850px;"></div>
 
-    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=1b4fdb69fa82e1614b3c8bdea143de2f"></script>
+    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=1b4fdb69fa82e1614b3c8bdea143de2f"></script>
     <script>
         var mapContainer = document.getElementById('map');
         var mapOption = {{ center: new kakao.maps.LatLng(37.3422, 127.9201), level: 5 }};
