@@ -89,7 +89,7 @@ with st.sidebar:
                     time.sleep(0.5) 
                     
                 except Exception as e:
-                    # 💡 [핵심 업데이트] 치과 오작동 버그 픽스! 정밀해진 비상 키워드 매칭 엔진
+                    # 💡 비상 키워드 매칭 엔진 가동
                     symptom_txt = combined_symptom.lower()
                     
                     # 기본 디폴트값 세팅
@@ -111,8 +111,9 @@ with st.sidebar:
                     elif any(w in symptom_txt for w in ["배", "소화", "위", "토", "설사", "복통", "장염", "내과"]):
                         pred, dept = "소화기 질환", "내과"
                         
-                    # 비상 모드임을 알리되 사용자 경험을 위해 매칭값 주입
-                    st.session_state['pred'] = f"{pred} (비상 백업 매칭)"
+                    # 💡 [핵심] 팀장님 요청대로 "비상 백업 매칭"이라는 글자를 완벽히 제거했습니다.
+                    # 이제 화면에는 "입력하신 증상은 근골격계 질환(으)로 의심되며..." 라고만 깔끔하게 나옵니다.
+                    st.session_state['pred'] = pred
                     st.session_state['dept'] = dept
                     st.session_state['selected_hospital'] = "🗺️ 전체 보기"
         
