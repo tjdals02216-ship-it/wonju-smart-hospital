@@ -44,6 +44,7 @@ def get_kakao_map_html(hospitals_json, selected_hospital):
     <html>
     <head>
         <meta charset="utf-8">
+        <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
         <style>
             .info-window {{ padding: 12px; background: white; border: 1px solid #ccc; border-radius: 8px; width: 220px; font-family: sans-serif; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }}
             .info-window h4 {{ margin: 0 0 5px 0; font-size: 15px; color: #333; }}
